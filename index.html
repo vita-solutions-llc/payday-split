@@ -143,8 +143,9 @@
   </div>
 </div>
 
-<script nonce="vs-2025-brand">
-  (function(){'use strict';
+<script>
+  (function(){
+    'use strict';
     const $ = id => document.getElementById(id);
     const dollars = n => isFinite(n) ? n.toLocaleString(undefined, {style:'currency', currency:'USD'}) : '$0.00';
     const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
@@ -158,30 +159,49 @@
       const A = parseFloat(net.value) || 0;
       let b = parseFloat(keepPct.value);
       let c = parseFloat(calmPct.value);
-      b = isFinite(b) ? clamp(b,0,100) : 0;
-      c = isFinite(c) ? clamp(c,0,100) : 0;
 
-      const d = 100 - b - c;
-      const e = A * b / 100;
-      const f = A * c / 100;
-      const g = A - (e + f);
+      // sanitize inputs
+      b = isFinite(b) ? b : 0;
+      c = isFinite(c) ? c : 0;
 
+      const d = 100 - b - c;     // Catch-Up %
+      const e = A * b / 100;     // Keep $
+      const f = A * c / 100;     // Calm $
+      const g = A - (e + f);     // Catch-Up $
+
+      // write to UI
       catchPct.value = isFinite(d) ? d.toFixed(0) : '';
-      keepPctOut.textContent = b.toFixed(0);
-      calmPctOut.textContent = c.toFixed(0);
+      keepPctOut.textContent = isFinite(b) ? b.toFixed(0) : '0';
+      calmPctOut.textContent = isFinite(c) ? c.toFixed(0) : '0';
       catchPctOut.textContent = isFinite(d) ? d.toFixed(0) : '0';
       keepAmt.textContent = dollars(e);
       calmAmt.textContent = dollars(f);
       catchAmt.textContent = dollars(g);
-      totalPct.textContent = isFinite(b+c+d) ? (b + c + d).toFixed(0) : '0';
+      totalPct.textContent = isFinite(b + c + d) ? (b + c + d).toFixed(0) : '0';
       sumAmt.textContent = dollars(e + f + g);
 
-      const pctOK = Math.round(b + c + d) === 100;
-      const moneyOK = Math.abs((e + f + g) - A) < 0.01;
+      // strict checks so "OK" only shows when it's really correct
+      const within = (x, lo, hi) => isFinite(x) && x >= lo && x <= hi;
 
-      rowStatus.textContent = pctOK ? 'OK' : 'Fix: B + C + D must equal 100';
+      const pctSumOK  = Math.abs((b + c + d) - 100) < 0.001;   // adds to 100
+      const eachPctOK = within(b,0,100) && within(c,0,100) && within(d,0,100); // none negative or >100
+      const pctOK     = pctSumOK && eachPctOK;
+
+      const dollarsOK = Math.abs((e + f + g) - A) < 0.01 && e >= 0 && f >= 0 && g >= 0;
+      const moneyOK   = dollarsOK && A >= 0;
+
+      if (!A) {
+        rowStatus.textContent = 'Enter Net Pay';
+        rowStatus.className = 'status bad';
+        sumStatus.textContent = '—';
+        sumStatus.className = 'status muted';
+        return;
+      }
+
+      rowStatus.textContent = pctOK ? 'OK' : 'Fix: each 0–100 and total 100';
       rowStatus.className = 'status ' + (pctOK ? 'ok' : 'bad');
-      sumStatus.textContent = moneyOK ? '$ OK' : 'Fix $: E + F + G ≠ Net Pay';
+
+      sumStatus.textContent = moneyOK ? '$ OK' : 'Fix $ total';
       sumStatus.className = 'status ' + (moneyOK ? 'ok' : 'bad');
     }
 
