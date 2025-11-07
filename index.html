@@ -148,7 +148,6 @@
     'use strict';
     const $ = id => document.getElementById(id);
     const dollars = n => isFinite(n) ? n.toLocaleString(undefined, {style:'currency', currency:'USD'}) : '$0.00';
-    const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 
     const net = $('net'), keepPct = $('keepPct'), calmPct = $('calmPct'), catchPct = $('catchPct');
     const keepPctOut = $('keepPctOut'), calmPctOut = $('calmPctOut'), catchPctOut = $('catchPctOut');
@@ -164,6 +163,7 @@
       b = isFinite(b) ? b : 0;
       c = isFinite(c) ? c : 0;
 
+      // math
       const d = 100 - b - c;     // Catch-Up %
       const e = A * b / 100;     // Keep $
       const f = A * c / 100;     // Calm $
@@ -180,16 +180,16 @@
       totalPct.textContent = isFinite(b + c + d) ? (b + c + d).toFixed(0) : '0';
       sumAmt.textContent = dollars(e + f + g);
 
-      // strict checks so "OK" only shows when it's really correct
+      // strict checks so "OK" is real
       const within = (x, lo, hi) => isFinite(x) && x >= lo && x <= hi;
-
-      const pctSumOK  = Math.abs((b + c + d) - 100) < 0.001;   // adds to 100
-      const eachPctOK = within(b,0,100) && within(c,0,100) && within(d,0,100); // none negative or >100
+      const pctSumOK  = Math.abs((b + c + d) - 100) < 0.001;           // adds to 100
+      const eachPctOK = within(b,0,100) && within(c,0,100) && within(d,0,100); // no negatives or >100
       const pctOK     = pctSumOK && eachPctOK;
 
       const dollarsOK = Math.abs((e + f + g) - A) < 0.01 && e >= 0 && f >= 0 && g >= 0;
       const moneyOK   = dollarsOK && A >= 0;
 
+      // gentle guard when Net Pay is empty
       if (!A) {
         rowStatus.textContent = 'Enter Net Pay';
         rowStatus.className = 'status bad';
@@ -205,6 +205,7 @@
       sumStatus.className = 'status ' + (moneyOK ? 'ok' : 'bad');
     }
 
+    // hook up events
     ['input','change'].forEach(evt => {
       net.addEventListener(evt, recalc);
       keepPct.addEventListener(evt, recalc);
@@ -213,6 +214,7 @@
     recalc();
   })();
 </script>
+
 
 
 </body></html>
